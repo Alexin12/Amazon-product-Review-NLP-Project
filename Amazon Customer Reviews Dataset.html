@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<!-- saved from url=(0055)https://s3.amazonaws.com/amazon-reviews-pds/readme.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="./Amazon Customer Reviews Dataset_files/bootstrap.min.css" integrity="sha384-QgMEqHzUTK+LoHUhEPkPPb5doQ7O2/sBRiq03GWdbo3k3eNPu/LMiRtrWI+SdVzu" crossorigin="anonymous">
+  <link rel="stylesheet" href="./Amazon Customer Reviews Dataset_files/awsod.css" integrity="sha384-xJI5lYTAHi5szIar83e2pooIt8BOLN3vGa4dRrLi07y45XFAbgzl9F0mMNyw5SzN" crossorigin="anonymous">
+  <title>Amazon Customer Reviews Dataset</title>
+</head>
+<body>
+  <div class="container">
+    <div class="col-md-8 col-md-offset-2">
+      <h1>Amazon Customer Reviews Dataset</h1>
+
+<p>Amazon Customer Reviews (a.k.a. Product Reviews) is one of Amazon’s iconic products. In a period of over two decades since the first review in 1995, millions of Amazon customers have contributed over a hundred million reviews to express opinions and describe their experiences regarding products on the Amazon.com website. This makes Amazon Customer Reviews a rich source of information for academic researchers in the fields of Natural Language Processing (NLP), Information Retrieval (IR), and Machine Learning (ML), amongst others. Accordingly, we are releasing this data to further research in multiple disciplines related to understanding customer product experiences.  Specifically, this dataset was constructed to represent a sample of customer evaluations and opinions, variation in the perception of a product across geographical regions, and promotional intent or bias in reviews.</p>
+
+<h2 id="accessing-the-amazon-customer-reviews-dataset">Accessing the Amazon Customer Reviews Dataset</h2>
+
+<p>Over 130+ million customer reviews are available to researchers as part of this release. The data is available in TSV files in the <code>amazon-reviews-pds</code> S3 bucket in AWS US East Region. Each line in the data files corresponds to an individual review (tab delimited, with no quote and escape characters). Samples of the data are available in <a href="https://s3.amazonaws.com/amazon-reviews-pds/tsv/sample_us.tsv">English</a> and <a href="https://s3.amazonaws.com/amazon-reviews-pds/tsv/sample_fr.tsv">French</a>; more details on the information in each column can be found <a href="https://s3.amazonaws.com/amazon-reviews-pds/tsv/index.txt">here</a>.</p>
+
+<p>If you use the AWS Command Line Interface, you can list data in the bucket with the “ls” command:</p>
+
+<p><code>aws s3 ls s3://amazon-reviews-pds/tsv/</code></p>
+
+<p>To download data using the AWS Command Line Interface, you can use the “cp” command. For instance, the following command will copy the file named amazon_reviews_us_Camera_v1_00.tsv.gz to your local directory:</p>
+
+<p><code>aws s3 cp s3://amazon-reviews-pds/tsv/amazon_reviews_us_Camera_v1_00.tsv.gz .</code></p>
+
+<p>You may list the available files using the CLI or check this <a href="https://s3.amazonaws.com/amazon-reviews-pds/tsv/index.txt">index file</a> which includes URLs for all available files.</p>
+
+<h2 id="about-the-data">About the Data</h2>
+
+<p>The dataset contains the customer review text with accompanying metadata, consisting of two major components:</p>
+
+<ol>
+<li>A collection of reviews written in the Amazon.com marketplace and associated metadata from 1995 until 2015. This is intended to facilitate study into the properties (and the evolution) of customer reviews potentially including how people evaluate and express their experiences with respect to products at scale. (130M+ customer reviews)</li>
+<li>A collection of reviews about products in multiple languages from different Amazon marketplaces, intended to facilitate analysis of customers’ perception of the same products and wider consumer preferences across languages and countries. (200K+ customer reviews in 5 countries)</li>
+</ol>
+
+There was a third dataset with non-compliant reviews which has been recalled and is no longer distributed. Those who obtained access in the past through signing the specific data use Terms and Conditions, may continue to use the data under the same terms.
+
+<h2 id="data-formats">Data Formats</h2>
+
+<p>The dataset is currently available in two file formats.</p>
+
+<ol>
+<li>Tab separated value (TSV), a text format - s3://amazon-reviews-pds/tsv/</li>
+<li>Parquet, an optimized columnar binary format - s3://amazon-reviews-pds/parquet/</li>
+</ol>
+
+<p>To further improve query performance the Parquet dataset is partitioned (divided into subfolders) on S3 by <strong>product_category</strong>.  This allows for queries
+using a <strong>WHERE</strong> clause on <strong>product_category</strong> to only read data specific to that category.</p>
+
+<p>For example:</p>
+
+<pre><code class="language-sql">SELECT product_title, star_rating FROM table_name WHERE product_category = 'Books'
+</code></pre>
+
+<p>The above SQL query will only read data from s3://amazon-reviews-pds/parquet/product_category=Books/ improving performance and reducing query costs.</p>
+
+<p>To quickly get started with the dataset, in <a href="https://aws.amazon.com/about-aws/global-infrastructure/regional-product-services/">regions</a> where <a href="https://aws.amazon.com/glue/">AWS Glue</a> is available you can use a nice feature called the <a href="https://docs.aws.amazon.com/glue/latest/dg/add-crawler.html">crawler</a> to automatically discover the data and create the required tables you will later query.</p>
+
+<p>Alternatively you can head over to the <a href="https://console.aws.amazon.com/athena/">Amazon Athena console</a> and manually create a table as follows:</p>
+
+<pre><code class="language-sql">CREATE EXTERNAL TABLE amazon_reviews_parquet(
+  marketplace string, 
+  customer_id string, 
+  review_id string, 
+  product_id string, 
+  product_parent string, 
+  product_title string, 
+  star_rating int, 
+  helpful_votes int, 
+  total_votes int, 
+  vine string, 
+  verified_purchase string, 
+  review_headline string, 
+  review_body string, 
+  review_date bigint, 
+  year int)
+PARTITIONED BY (product_category string)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://amazon-reviews-pds/parquet/'
+</code></pre>
+
+<p>Once the table is created execute the following in the Athena console only once:</p>
+
+<pre><code class="language-sql">MSCK REPAIR TABLE amazon_reviews_parquet
+</code></pre>
+
+<h2 id="contact">Contact</h2>
+
+<h2 id="license">License</h2>
+
+<p>By accessing the Amazon Customer Reviews Library (“Reviews Library”), you agree that the Reviews Library is an Amazon Service subject to the <a href="https://www.amazon.com/gp/help/customer/display.html/ref=footer_cou?ie=UTF8&amp;amp;nodeId=508088">Amazon.com Conditions of Use</a> and you agree to be bound by them, with the following additional conditions:</p>
+
+<p>In addition to the license rights granted under the Conditions of Use, Amazon or its content providers grant you a limited, non-exclusive, non-transferable, non-sublicensable, revocable license to access and use the Reviews Library for purposes of academic research. You may not resell, republish, or make any commercial use of the Reviews Library or its contents, including use of the Reviews Library for commercial research, such as research related to a funding or consultancy contract, internship, or other relationship in which the results are provided for a fee or delivered to a for-profit organization. You may not (a) link or associate content in the Reviews Library with any personal information (including Amazon customer accounts), or (b) attempt to determine the identity of the author of any content in the Reviews Library. If you violate any of the foregoing conditions, your license to access and use the Reviews Library will automatically terminate without prejudice to any of the other rights or remedies Amazon may have.</p>
+
+<p>This license language is also available at <a href="https://s3.amazonaws.com/amazon-reviews-pds/license.txt">https://s3.amazonaws.com/amazon-reviews-pds/license.txt</a></p>
+
+      <footer>
+        <hr>
+        <a href="http://aws.amazon.com/public-datasets">AWS Public Datasets</a>
+      </footer>
+    </div>
+  </div>
+
+</body></html>
